@@ -2,6 +2,16 @@
 
 **Timepoint Data Format** — JSON-LD interchange for temporal causal data. Every service in the Timepoint suite speaks TDF: Flash scenes, Pro simulation outputs, Clockchain nodes, SNAG-Bench scores, and Proteus predictions are all expressible as TDF records.
 
+```mermaid
+flowchart LR
+    Flash --> TDF(["TDF Record"])
+    Pro --> TDF
+    CC[Clockchain] --> TDF
+    TDF --> SB[SNAG-Bench]
+    TDF --> Proteus
+    TDF --> CC
+```
+
 ## Record Model
 
 Each `TDFRecord` contains:
