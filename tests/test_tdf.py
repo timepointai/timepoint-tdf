@@ -92,9 +92,20 @@ class TestFromFlash:
         timepoint = {
             "id": "flash-uuid-456",
             "created_at": "2024-03-15T14:00:00+00:00",
+            "query": "Test query",
+            "slug": "test-query-abc",
+            "year": 1941,
+            "month": 12,
+            "day": 15,
+            "season": "winter",
+            "time_of_day": "afternoon",
+            "era": "World War II",
+            "location": "Bletchley Park",
             "scene_data": {"location": "park"},
             "character_data": [{"name": "Alice"}],
             "dialog": ["Hello"],
+            "grounding_data": {"verified": True},
+            "moment_data": {"tension": "high"},
             "metadata": {"source_file": "test.mp4"},
             "internal_field": "should_be_excluded",
         }
@@ -103,11 +114,28 @@ class TestFromFlash:
         assert record.source == "flash"
         assert record.provenance.generator == "timepoint-flash"
         assert record.provenance.flash_id == "flash-uuid-456"
-        assert "scene_data" in record.payload
-        assert "character_data" in record.payload
-        assert "dialog" in record.payload
-        assert "metadata" in record.payload
+        expected_keys = {
+            "query", "slug", "year", "month", "day", "season",
+            "time_of_day", "era", "location", "scene_data",
+            "character_data", "dialog", "grounding_data",
+            "moment_data", "metadata",
+        }
+        assert set(record.payload.keys()) == expected_keys
+        assert record.payload["year"] == 1941
+        assert record.payload["location"] == "Bletchley Park"
+        assert record.payload["grounding_data"] == {"verified": True}
+        assert record.payload["moment_data"] == {"tension": "high"}
         assert "internal_field" not in record.payload
+
+    def test_missing_optional_fields_default_to_none(self):
+        timepoint = {
+            "id": "flash-uuid-minimal",
+            "created_at": "2024-03-15T14:00:00+00:00",
+        }
+        record = from_flash(timepoint)
+        assert record.payload["query"] is None
+        assert record.payload["grounding_data"] is None
+        assert record.payload["moment_data"] is None
 
 
 class TestFromPro:

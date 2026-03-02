@@ -27,17 +27,25 @@ def from_clockchain(node: dict) -> TDFRecord:
     )
 
 
+_FLASH_PAYLOAD_KEYS = (
+    "query", "slug", "year", "month", "day", "season", "time_of_day",
+    "era", "location", "scene_data", "character_data", "dialog",
+    "grounding_data", "moment_data", "metadata",
+)
+
+
 def from_flash(timepoint: dict) -> TDFRecord:
-    """Transform a Flash timepoint dict to TDF."""
+    """Transform a Flash timepoint dict to TDF.
+
+    Payload includes the full temporal-spatial-narrative content:
+    query, slug, year, month, day, season, time_of_day, era, location,
+    scene_data, character_data, dialog, grounding_data, moment_data, metadata.
+    """
     timestamp = timepoint["created_at"]
     if isinstance(timestamp, str):
         timestamp = datetime.fromisoformat(timestamp)
 
-    payload = {
-        k: v
-        for k, v in timepoint.items()
-        if k in ("scene_data", "character_data", "dialog", "metadata")
-    }
+    payload = {k: timepoint.get(k) for k in _FLASH_PAYLOAD_KEYS}
 
     return TDFRecord(
         id=timepoint["id"],
