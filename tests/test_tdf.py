@@ -115,10 +115,21 @@ class TestFromFlash:
         assert record.provenance.generator == "timepoint-flash"
         assert record.provenance.flash_id == "flash-uuid-456"
         expected_keys = {
-            "query", "slug", "year", "month", "day", "season",
-            "time_of_day", "era", "location", "scene_data",
-            "character_data", "dialog", "grounding_data",
-            "moment_data", "metadata",
+            "query",
+            "slug",
+            "year",
+            "month",
+            "day",
+            "season",
+            "time_of_day",
+            "era",
+            "location",
+            "scene_data",
+            "character_data",
+            "dialog",
+            "grounding_data",
+            "moment_data",
+            "metadata",
         }
         assert set(record.payload.keys()) == expected_keys
         assert record.payload["year"] == 1941
