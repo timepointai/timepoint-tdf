@@ -2,6 +2,12 @@
 
 **Timepoint Data Format** — JSON-LD interchange for temporal causal data. Every service in the Timepoint suite speaks TDF: Flash scenes, Pro simulation outputs, Clockchain nodes, SNAG-Bench scores, and Proteus predictions are all expressible as TDF records.
 
+## Changes 2026-03-02 — v1.1.0: Full Flash payload support
+
+- `from_flash()` now extracts all 16 fields from Flash timepoints: query, slug, year, month, day, season, time_of_day, era, location, scene_data, character_data, dialog, grounding_data, moment_data, metadata
+- Missing optional fields default to `None` instead of being omitted
+- Branch protection enforced on `main` (1 approval required, no force pushes)
+
 ```mermaid
 flowchart LR
     Flash --> TDF(["TDF Record"])
@@ -29,7 +35,7 @@ Each `TDFRecord` contains:
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `from_flash(timepoint)` | Flash scene dict | TDFRecord (scene_data, character_data, dialog, metadata) |
+| `from_flash(timepoint)` | Flash scene dict | TDFRecord (query, slug, year, month, day, season, time_of_day, era, location, scene_data, character_data, dialog, grounding_data, moment_data, metadata) |
 | `from_pro(run_data)` | Pro run output dict | TDFRecord (entities, dialogs, causal_edges, metadata) |
 | `from_clockchain(node)` | Clockchain node dict | TDFRecord (canonical URL as id, confidence in provenance) |
 
