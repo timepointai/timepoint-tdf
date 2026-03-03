@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from typing import Any
 
 from .record import TDFProvenance, TDFRecord
 
@@ -7,7 +6,14 @@ from .record import TDFProvenance, TDFRecord
 def from_clockchain(node: dict) -> TDFRecord:
     """Transform a clockchain node dict to TDF."""
     record_id = node.get("path") or node["id"]
-    internal_keys = {"path", "id", "created_at", "updated_at", "flash_timepoint_id", "confidence"}
+    internal_keys = {
+        "path",
+        "id",
+        "created_at",
+        "updated_at",
+        "flash_timepoint_id",
+        "confidence",
+    }
     payload = {k: v for k, v in node.items() if k not in internal_keys}
 
     timestamp = node["created_at"]
@@ -28,9 +34,21 @@ def from_clockchain(node: dict) -> TDFRecord:
 
 
 _FLASH_PAYLOAD_KEYS = (
-    "query", "slug", "year", "month", "day", "season", "time_of_day",
-    "era", "location", "scene_data", "character_data", "dialog",
-    "grounding_data", "moment_data", "metadata",
+    "query",
+    "slug",
+    "year",
+    "month",
+    "day",
+    "season",
+    "time_of_day",
+    "era",
+    "location",
+    "scene_data",
+    "character_data",
+    "dialog",
+    "grounding_data",
+    "moment_data",
+    "metadata",
 )
 
 
