@@ -1,12 +1,10 @@
 # timepoint-tdf
 
-**Timepoint Data Format** — JSON-LD interchange for temporal causal data. Every service in the Timepoint suite speaks TDF: Flash scenes, Pro simulation outputs, Clockchain nodes, SNAG-Bench scores, and Proteus predictions are all expressible as TDF records.
+**Timepoint Data Format** — a canonical envelope for temporal causal data across the Timepoint suite.
 
-## Changes 2026-03-02 — v1.1.0: Full Flash payload support
+Every service in Timepoint (Flash, Pro, Clockchain, SNAG-Bench, Proteus) produces structurally different data — historical scenes, causal simulations, graph nodes, quality scores, predictions. TDF normalizes all of them into a single content-addressed record type so downstream consumers can ingest any record without knowing which service produced it.
 
-- `from_flash()` now extracts all 16 fields from Flash timepoints: query, slug, year, month, day, season, time_of_day, era, location, scene_data, character_data, dialog, grounding_data, moment_data, metadata
-- Missing optional fields default to `None` instead of being omitted
-- Branch protection enforced on `main` (1 approval required, no force pushes)
+**Design principle:** uniform envelope, varying payload. The six envelope fields (`id`, `source`, `timestamp`, `provenance`, `payload`, `tdf_hash`) are fixed across all sources. The `payload` dict schema varies by source. The `tdf_hash` (SHA-256 of the canonicalized payload) gives you content-addressable deduplication when the same event flows through multiple services.
 
 ```mermaid
 flowchart LR
@@ -20,26 +18,79 @@ flowchart LR
 
 ## Record Model
 
-Each `TDFRecord` contains:
+Every `TDFRecord` shares this envelope:
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `id` | str | Clockchain canonical URL or Flash/Pro UUID |
 | `source` | Literal | `clockchain`, `flash`, `pro`, `proteus`, `snag-bench` |
 | `timestamp` | datetime | When the record was created |
-| `provenance` | TDFProvenance | Generator, run_id, confidence, flash_id |
-| `payload` | dict | Source-specific content |
+| `provenance` | TDFProvenance | Lineage: generator, run_id, confidence, flash_id |
+| `payload` | dict | **Source-specific content** (see payload schemas below) |
 | `tdf_hash` | str | SHA-256 of canonicalized payload (content-addressed) |
+
+`TDFProvenance` tracks cross-service lineage — `flash_id` preserves the originating Flash UUID even when the canonical `id` is a Clockchain URL, so you can always trace a record back to its source rendering.
+
+## Payload Schemas by Source
+
+The payload is where data diverges. Each transform projects source-specific fields into the payload:
+
+**Flash** — full spatio-temporal-narrative content of a rendered historical moment (16 fields):
+
+`query`, `slug`, `year`, `month`, `day`, `season`, `time_of_day`, `era`, `location`, `scene_data`, `character_data`, `dialog`, `grounding_data`, `moment_data`, `metadata`
+
+**Pro** — causal simulation output (4 fields):
+
+`entities`, `dialogs`, `causal_edges`, `metadata`
+
+**Clockchain** — graph node pass-through (all node fields minus internal keys like `path`, `created_at`, `confidence`; confidence is promoted into `provenance`)
+
+## Example Record
+
+A Flash scene rendered as TDF:
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "version": "1.0.0",
+  "source": "flash",
+  "timestamp": "2026-03-01T12:00:00Z",
+  "provenance": {
+    "generator": "timepoint-flash",
+    "run_id": null,
+    "confidence": null,
+    "flash_id": "a1b2c3d4-..."
+  },
+  "payload": {
+    "query": "assassination of Archduke Franz Ferdinand",
+    "slug": "franz-ferdinand-assassination",
+    "year": 1914, "month": 6, "day": 28,
+    "season": "summer",
+    "time_of_day": "morning",
+    "era": "early_20th_century",
+    "location": "Sarajevo, Bosnia",
+    "scene_data": { "..." : "..." },
+    "character_data": { "..." : "..." },
+    "dialog": [ "..." ],
+    "grounding_data": { "..." : "..." },
+    "moment_data": { "..." : "..." },
+    "metadata": { "..." : "..." }
+  },
+  "tdf_hash": "e3b0c44298fc1c14..."
+}
+```
 
 ## Transforms
 
 | Function | Input | Output |
 |----------|-------|--------|
-| `from_flash(timepoint)` | Flash scene dict | TDFRecord (query, slug, year, month, day, season, time_of_day, era, location, scene_data, character_data, dialog, grounding_data, moment_data, metadata) |
-| `from_pro(run_data)` | Pro run output dict | TDFRecord (entities, dialogs, causal_edges, metadata) |
-| `from_clockchain(node)` | Clockchain node dict | TDFRecord (canonical URL as id, confidence in provenance) |
+| `from_flash(timepoint)` | Flash scene dict | TDFRecord with 16-field payload |
+| `from_pro(run_data)` | Pro run output dict | TDFRecord with causal graph payload |
+| `from_clockchain(node)` | Clockchain node dict | TDFRecord with canonical URL as id, confidence in provenance |
 
 ## I/O
+
+Records serialize to JSONL — one JSON object per line, streamable into any training pipeline:
 
 ```python
 from timepoint_tdf import TDFRecord, from_flash, write_tdf_jsonl, read_tdf_jsonl
@@ -56,6 +107,14 @@ pip install -e .
 ```
 
 Requires Python 3.10+ and Pydantic 2.0+.
+
+## Changelog
+
+### v1.1.0 (2026-03-02)
+
+- `from_flash()` now extracts all 16 fields from Flash timepoints
+- Missing optional fields default to `None` instead of being omitted
+- Branch protection enforced on `main` (1 approval required, no force pushes)
 
 ## Timepoint Suite
 
