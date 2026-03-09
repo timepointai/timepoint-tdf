@@ -8,6 +8,7 @@ from timepoint_tdf import (
     from_clockchain,
     from_flash,
     from_pro,
+    from_proteus,
     write_tdf_jsonl,
     read_tdf_jsonl,
 )
@@ -168,6 +169,59 @@ class TestFromPro:
         assert "dialogs" in record.payload
         assert "causal_edges" in record.payload
         assert "metadata" in record.payload
+
+
+class TestFromProteus:
+    def test_basic_transform(self):
+        resolution = {
+            "market_id": 42,
+            "resolved_at": "2026-03-04T18:30:00+00:00",
+            "actor_handle": "elonmusk",
+            "actual_text": "Starship flight 2 is GO for March.",
+            "predicted_text": "Starship flight 2 confirmed for March.",
+            "levenshtein_distance": 12,
+            "winning_submission_id": "sub-001",
+            "submission_count": 5,
+            "total_pool": "0.05",
+            "tx_hash": "0xabc123",
+            "block_number": 12345678,
+            "gas_used": 9000000,
+        }
+        record = from_proteus(resolution)
+        assert record.id == "proteus-market-42"
+        assert record.source == "proteus"
+        assert record.provenance.generator == "proteus-markets"
+        assert record.provenance.run_id == "42"
+        assert record.payload["actor_handle"] == "elonmusk"
+        assert record.payload["actual_text"] == "Starship flight 2 is GO for March."
+        assert record.payload["predicted_text"] == "Starship flight 2 confirmed for March."
+        assert record.payload["levenshtein_distance"] == 12
+        assert record.payload["tx_hash"] == "0xabc123"
+        assert record.payload["block_number"] == 12345678
+        assert record.payload["gas_used"] == 9000000
+        assert record.payload["submission_count"] == 5
+        assert record.payload["total_pool"] == "0.05"
+        assert record.payload["winning_submission_id"] == "sub-001"
+        # Internal keys excluded from payload
+        assert "market_id" not in record.payload
+        assert "resolved_at" not in record.payload
+
+    def test_missing_optional_fields_default_to_none(self):
+        resolution = {
+            "market_id": 7,
+            "resolved_at": "2026-03-04T18:30:00+00:00",
+        }
+        record = from_proteus(resolution)
+        assert record.id == "proteus-market-7"
+        assert record.payload["actor_handle"] is None
+        assert record.payload["actual_text"] is None
+        assert record.payload["levenshtein_distance"] is None
+
+    def test_timestamp_fallback(self):
+        resolution = {"market_id": 1}
+        record = from_proteus(resolution)
+        assert record.timestamp is not None
+        assert record.id == "proteus-market-1"
 
 
 class TestJSONLRoundTrip:
