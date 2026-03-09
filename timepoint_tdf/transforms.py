@@ -99,3 +99,44 @@ def from_pro(run_data: dict) -> TDFRecord:
         ),
         payload=payload,
     )
+
+
+_PROTEUS_PAYLOAD_KEYS = (
+    "actor_handle",
+    "actual_text",
+    "predicted_text",
+    "levenshtein_distance",
+    "winning_submission_id",
+    "submission_count",
+    "total_pool",
+    "tx_hash",
+    "block_number",
+    "gas_used",
+)
+
+
+def from_proteus(resolution: dict) -> TDFRecord:
+    """Transform a Proteus market resolution dict to TDF.
+
+    Payload includes market resolution data: actor_handle, actual_text,
+    predicted_text, levenshtein_distance, winning_submission_id,
+    submission_count, total_pool, tx_hash, block_number, gas_used.
+    """
+    timestamp = resolution.get("resolved_at", datetime.now(timezone.utc))
+    if isinstance(timestamp, str):
+        timestamp = datetime.fromisoformat(timestamp)
+
+    payload = {k: resolution.get(k) for k in _PROTEUS_PAYLOAD_KEYS}
+
+    market_id = resolution.get("market_id")
+
+    return TDFRecord(
+        id=f"proteus-market-{market_id}",
+        source="proteus",
+        timestamp=timestamp,
+        provenance=TDFProvenance(
+            generator="proteus-markets",
+            run_id=str(market_id),
+        ),
+        payload=payload,
+    )
