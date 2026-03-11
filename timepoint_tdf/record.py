@@ -10,6 +10,12 @@ class TDFProvenance(BaseModel):
     run_id: Optional[str] = None
     confidence: Optional[float] = None
     flash_id: Optional[str] = None  # Flash UUID when available (secondary reference)
+    text_model: Optional[str] = None  # Model ID that generated text content
+    image_model: Optional[str] = None  # Model ID that generated image content
+    model_provider: Optional[str] = None  # Routing provider (google, openrouter, etc.)
+    model_permissiveness: Optional[str] = None  # permissive, restricted, unknown
+    schema_version: Optional[str] = "0.1"  # Clockchain schema version
+    generation_id: Optional[str] = None  # Unique ID for the generation run
 
 
 class TDFRecord(BaseModel):
@@ -26,5 +32,6 @@ class TDFRecord(BaseModel):
             self.tdf_hash = self.compute_hash()
 
     def compute_hash(self) -> str:
+        """Hash payload only — provenance is metadata about the record, not content."""
         canonical = json.dumps(self.payload, sort_keys=True, default=str)
         return hashlib.sha256(canonical.encode()).hexdigest()
