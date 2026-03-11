@@ -2,6 +2,26 @@ from datetime import datetime, timezone
 
 from .record import TDFProvenance, TDFRecord
 
+SCHEMA_VERSIONS = {
+    "0.1": "Original 4 edge types, no model tracking",
+    "0.2": "11 edge types, model provenance, graph state hash",
+}
+
+_PERMISSIVE_PREFIXES = ("deepseek", "qwen", "meta-llama", "mistralai", "nvidia")
+_RESTRICTED_PREFIXES = ("google", "gemini", "anthropic", "claude", "openai", "gpt")
+
+
+def infer_model_permissiveness(model_id: str) -> str:
+    """Infer license permissiveness from a model ID string."""
+    lower = model_id.lower()
+    for prefix in _PERMISSIVE_PREFIXES:
+        if prefix in lower:
+            return "permissive"
+    for prefix in _RESTRICTED_PREFIXES:
+        if prefix in lower:
+            return "restricted"
+    return "unknown"
+
 
 def from_clockchain(node: dict) -> TDFRecord:
     """Transform a clockchain node dict to TDF."""
@@ -13,6 +33,13 @@ def from_clockchain(node: dict) -> TDFRecord:
         "updated_at",
         "flash_timepoint_id",
         "confidence",
+        "text_model",
+        "image_model",
+        "model_provider",
+        "model_permissiveness",
+        "schema_version",
+        "generation_id",
+        "graph_state_hash",
     }
     payload = {k: v for k, v in node.items() if k not in internal_keys}
 
@@ -28,6 +55,12 @@ def from_clockchain(node: dict) -> TDFRecord:
             generator="timepoint-clockchain",
             flash_id=node.get("flash_timepoint_id"),
             confidence=node.get("confidence"),
+            text_model=node.get("text_model"),
+            image_model=node.get("image_model"),
+            model_provider=node.get("model_provider"),
+            model_permissiveness=node.get("model_permissiveness"),
+            schema_version=node.get("schema_version", "0.1"),
+            generation_id=node.get("generation_id"),
         ),
         payload=payload,
     )
@@ -65,6 +98,9 @@ def from_flash(timepoint: dict) -> TDFRecord:
 
     payload = {k: timepoint.get(k) for k in _FLASH_PAYLOAD_KEYS}
 
+    text_model = timepoint.get("text_model_used")
+    image_model = timepoint.get("image_model_used")
+
     return TDFRecord(
         id=timepoint["id"],
         source="flash",
@@ -72,6 +108,11 @@ def from_flash(timepoint: dict) -> TDFRecord:
         provenance=TDFProvenance(
             generator="timepoint-flash",
             flash_id=timepoint["id"],
+            text_model=text_model,
+            image_model=image_model,
+            model_provider=timepoint.get("model_provider"),
+            model_permissiveness=infer_model_permissiveness(text_model) if text_model else None,
+            generation_id=timepoint.get("generation_id"),
         ),
         payload=payload,
     )
