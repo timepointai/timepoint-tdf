@@ -9,6 +9,8 @@ from timepoint_tdf import (
     from_flash,
     from_pro,
     from_proteus,
+    SCHEMA_VERSIONS,
+    infer_model_permissiveness,
     write_tdf_jsonl,
     read_tdf_jsonl,
 )
@@ -53,6 +55,34 @@ class TestTDFRecord:
         )
         r1 = TDFRecord(payload={"x": 1, "y": 2}, **common)
         r2 = TDFRecord(payload={"y": 2, "x": 1}, **common)
+        assert r1.tdf_hash == r2.tdf_hash
+
+    def test_new_provenance_fields_default(self):
+        prov = TDFProvenance(generator="test")
+        assert prov.text_model is None
+        assert prov.image_model is None
+        assert prov.model_provider is None
+        assert prov.model_permissiveness is None
+        assert prov.schema_version == "0.1"
+        assert prov.generation_id is None
+
+    def test_provenance_does_not_affect_hash(self):
+        common = dict(
+            id="test-id",
+            source="flash",
+            timestamp=_sample_timestamp(),
+            payload={"same": "data"},
+        )
+        r1 = TDFRecord(provenance=TDFProvenance(generator="test"), **common)
+        r2 = TDFRecord(
+            provenance=TDFProvenance(
+                generator="test",
+                text_model="deepseek-r1",
+                model_provider="openrouter",
+                schema_version="0.2",
+            ),
+            **common,
+        )
         assert r1.tdf_hash == r2.tdf_hash
 
 
@@ -250,3 +280,114 @@ class TestJSONLRoundTrip:
                 assert orig.provenance == loaded_rec.provenance
         finally:
             os.unlink(tmp_path)
+
+    def test_round_trip_with_model_provenance(self):
+        records = [
+            TDFRecord(
+                id="record-prov",
+                source="clockchain",
+                timestamp=_sample_timestamp(),
+                provenance=TDFProvenance(
+                    generator="timepoint-clockchain",
+                    text_model="deepseek-r1",
+                    image_model="nvidia/flux-dev",
+                    model_provider="openrouter",
+                    model_permissiveness="permissive",
+                    schema_version="0.2",
+                    generation_id="gen-abc-123",
+                ),
+                payload={"title": "Test"},
+            )
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            tmp_path = f.name
+
+        try:
+            write_tdf_jsonl(records, tmp_path)
+            loaded = read_tdf_jsonl(tmp_path)
+            assert len(loaded) == 1
+            rec = loaded[0]
+            assert rec.provenance.text_model == "deepseek-r1"
+            assert rec.provenance.image_model == "nvidia/flux-dev"
+            assert rec.provenance.model_provider == "openrouter"
+            assert rec.provenance.model_permissiveness == "permissive"
+            assert rec.provenance.schema_version == "0.2"
+            assert rec.provenance.generation_id == "gen-abc-123"
+        finally:
+            os.unlink(tmp_path)
+
+
+class TestFromClockchainV02:
+    def test_v02_node_promotes_provenance_fields(self):
+        node = {
+            "path": "/2025/june/01/1200/us/test",
+            "id": "cc-v02-uuid",
+            "created_at": "2025-06-01T12:00:00+00:00",
+            "flash_timepoint_id": "flash-uuid",
+            "confidence": 0.9,
+            "text_model": "deepseek-r1",
+            "image_model": "nvidia/flux-dev",
+            "model_provider": "openrouter",
+            "model_permissiveness": "permissive",
+            "schema_version": "0.2",
+            "generation_id": "gen-001",
+            "graph_state_hash": "abc123hash",
+            "title": "V02 Event",
+            "body": "Content here",
+        }
+        record = from_clockchain(node)
+        assert record.provenance.text_model == "deepseek-r1"
+        assert record.provenance.image_model == "nvidia/flux-dev"
+        assert record.provenance.model_provider == "openrouter"
+        assert record.provenance.model_permissiveness == "permissive"
+        assert record.provenance.schema_version == "0.2"
+        assert record.provenance.generation_id == "gen-001"
+        # These should NOT be in payload
+        assert "text_model" not in record.payload
+        assert "image_model" not in record.payload
+        assert "model_provider" not in record.payload
+        assert "schema_version" not in record.payload
+        assert "generation_id" not in record.payload
+        assert "graph_state_hash" not in record.payload
+        # Content stays in payload
+        assert record.payload["title"] == "V02 Event"
+        assert record.payload["body"] == "Content here"
+
+
+class TestFromFlashModelProvenance:
+    def test_model_fields_mapped(self):
+        timepoint = {
+            "id": "flash-model-001",
+            "created_at": "2025-06-01T12:00:00+00:00",
+            "text_model_used": "deepseek-r1",
+            "image_model_used": "nvidia/flux-dev",
+            "model_provider": "openrouter",
+            "generation_id": "gen-flash-001",
+        }
+        record = from_flash(timepoint)
+        assert record.provenance.text_model == "deepseek-r1"
+        assert record.provenance.image_model == "nvidia/flux-dev"
+        assert record.provenance.model_provider == "openrouter"
+        assert record.provenance.model_permissiveness == "permissive"
+        assert record.provenance.generation_id == "gen-flash-001"
+
+
+class TestInferModelPermissiveness:
+    def test_permissive_models(self):
+        assert infer_model_permissiveness("deepseek-r1") == "permissive"
+        assert infer_model_permissiveness("qwen-2.5") == "permissive"
+        assert infer_model_permissiveness("meta-llama/llama-3") == "permissive"
+
+    def test_restricted_models(self):
+        assert infer_model_permissiveness("gemini-2.5-flash") == "restricted"
+        assert infer_model_permissiveness("claude-3-opus") == "restricted"
+        assert infer_model_permissiveness("gpt-4") == "restricted"
+
+    def test_unknown_model(self):
+        assert infer_model_permissiveness("some-custom-model") == "unknown"
+
+
+class TestSchemaVersions:
+    def test_has_expected_versions(self):
+        assert "0.1" in SCHEMA_VERSIONS
+        assert "0.2" in SCHEMA_VERSIONS
