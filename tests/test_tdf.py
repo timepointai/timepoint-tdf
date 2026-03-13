@@ -377,6 +377,7 @@ class TestInferModelPermissiveness:
         assert infer_model_permissiveness("deepseek-r1") == "permissive"
         assert infer_model_permissiveness("qwen-2.5") == "permissive"
         assert infer_model_permissiveness("meta-llama/llama-3") == "permissive"
+        assert infer_model_permissiveness("stabilityai/stable-diffusion-xl") == "permissive"
 
     def test_restricted_models(self):
         assert infer_model_permissiveness("gemini-2.5-flash") == "restricted"
