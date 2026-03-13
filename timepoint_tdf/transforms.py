@@ -7,7 +7,7 @@ SCHEMA_VERSIONS = {
     "0.2": "11 edge types, model provenance, graph state hash",
 }
 
-_PERMISSIVE_PREFIXES = ("deepseek", "qwen", "meta-llama", "mistralai", "nvidia")
+_PERMISSIVE_PREFIXES = ("deepseek", "qwen", "meta-llama", "mistralai", "nvidia", "stabilityai")
 _RESTRICTED_PREFIXES = ("google", "gemini", "anthropic", "claude", "openai", "gpt")
 
 
