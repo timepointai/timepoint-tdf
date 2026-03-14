@@ -1,6 +1,6 @@
 [project]
 name = "timepoint-tdf"
-version = "1.2.1"
+version = "1.2.2"
 description = "Timepoint Data Format — unified data interchange for the Timepoint suite"
 requires-python = ">=3.10"
 license = {text = "Apache-2.0"}

@@ -379,6 +379,27 @@ class TestInferModelPermissiveness:
         assert infer_model_permissiveness("meta-llama/llama-3") == "permissive"
         assert infer_model_permissiveness("stabilityai/stable-diffusion-xl") == "permissive"
 
+    def test_nvidia_nemotron_models_permissive(self):
+        assert infer_model_permissiveness("nvidia/llama-3.1-nemotron-70b-instruct") == "permissive"
+        assert infer_model_permissiveness("nvidia/llama-3.3-nemotron-super-49b-v1.5") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-3-nano-30b-a3b") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-3-nano-30b-a3b:free") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-3-super-120b-a12b:free") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-nano-12b-v2-vl") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-nano-12b-v2-vl:free") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-nano-9b-v2") == "permissive"
+        assert infer_model_permissiveness("nvidia/nemotron-nano-9b-v2:free") == "permissive"
+        assert infer_model_permissiveness("nvidia/llama-nemotron-embed-vl-1b-v2") == "permissive"
+        assert infer_model_permissiveness("nvidia/llama-nemotron-embed-vl-1b-v2:free") == "permissive"
+
+    def test_nousresearch_hermes_models_permissive(self):
+        assert infer_model_permissiveness("nousresearch/hermes-2-pro-llama-3-8b") == "permissive"
+        assert infer_model_permissiveness("nousresearch/hermes-3-llama-3.1-405b") == "permissive"
+        assert infer_model_permissiveness("nousresearch/hermes-3-llama-3.1-405b:free") == "permissive"
+        assert infer_model_permissiveness("nousresearch/hermes-3-llama-3.1-70b") == "permissive"
+        assert infer_model_permissiveness("nousresearch/hermes-4-405b") == "permissive"
+        assert infer_model_permissiveness("nousresearch/hermes-4-70b") == "permissive"
+
     def test_restricted_models(self):
         assert infer_model_permissiveness("gemini-2.5-flash") == "restricted"
         assert infer_model_permissiveness("claude-3-opus") == "restricted"
