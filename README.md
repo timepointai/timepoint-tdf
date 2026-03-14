@@ -110,6 +110,11 @@ Requires Python 3.10+ and Pydantic 2.0+.
 
 ## Changelog
 
+### v1.2.2 (2026-03-14)
+
+- Add `nousresearch` to permissive model prefix allowlist (Hermes family)
+- All NVIDIA Nemotron and NousResearch Hermes models now correctly classified as permissive
+
 ### v1.2.1 (2026-03-13)
 
 - Add `stabilityai` to permissive model allowlist
