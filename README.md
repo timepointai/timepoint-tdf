@@ -52,7 +52,7 @@ A Flash scene rendered as TDF:
 ```json
 {
   "id": "a1b2c3d4-...",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "source": "flash",
   "timestamp": "2026-03-01T12:00:00Z",
   "provenance": {
@@ -127,9 +127,10 @@ Open-source engines for temporal AI. Render the past. Simulate the future. Score
 
 | Service | Type | Repo | Role |
 |---------|------|------|------|
-| **Flash** | Open Source | timepoint-flash | Reality Writer — renders grounded historical moments (Synthetic Time Travel) |
-| **Pro** | Open Source | timepoint-pro | Rendering Engine — SNAG-powered simulation, TDF output, training data |
-| **Clockchain** | Open Source | timepoint-clockchain | Temporal Causal Graph — Rendered Past + Rendered Future, growing 24/7 |
+| **API Gateway** | Private | timepoint-api-gateway | Auth authority — JWT, OAuth (Apple/Google/GitHub), credits, rate limiting, request routing |
+| **Flash** | Open Source | timepoint-flash | Reality Writer — pure generation engine (no auth), renders grounded historical moments |
+| **Pro** | Open Source | timepoint-pro | SNAG Simulation Engine — temporal simulation, TDF output, training data |
+| **Clockchain** | Open Source | timepoint-clockchain | Temporal Causal Graph — 1,900+ nodes, 5M+ edges, MCP endpoint, growing 24/7 |
 | **SNAG Bench** | Open Source | timepoint-snag-bench | Quality Certifier — measures Causal Resolution across renderings |
 | **Proteus** | Open Source | proteus | Settlement Layer — prediction markets that validate Rendered Futures |
 | **TDF** | **Open Source** | **timepoint-tdf** | **Data Format — JSON-LD interchange across all services** |
