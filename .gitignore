@@ -182,5 +182,5 @@ cython_debug/
 # macOS
 .DS_Store
 
-# Stoneforge
-.stoneforge/
+# Local
+.local/
