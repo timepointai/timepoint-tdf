@@ -85,6 +85,55 @@ class TestTDFRecord:
         )
         assert r1.tdf_hash == r2.tdf_hash
 
+    def test_entity_ids_default_empty(self):
+        record = TDFRecord(
+            id="test-id",
+            source="flash",
+            timestamp=_sample_timestamp(),
+            provenance=TDFProvenance(generator="test"),
+            payload={"key": "value"},
+        )
+        assert record.entity_ids == []
+
+    def test_entity_ids_serialize_deserialize(self):
+        record = TDFRecord(
+            id="test-id",
+            source="flash",
+            timestamp=_sample_timestamp(),
+            provenance=TDFProvenance(generator="test"),
+            payload={"key": "value"},
+            entity_ids=["figure-abc-123", "figure-def-456"],
+        )
+        assert record.entity_ids == ["figure-abc-123", "figure-def-456"]
+        # Round-trip via dict
+        data = record.model_dump()
+        restored = TDFRecord(**data)
+        assert restored.entity_ids == ["figure-abc-123", "figure-def-456"]
+
+    def test_backward_compat_no_entity_ids(self):
+        """Records without entity_ids field still parse (backward compat)."""
+        data = {
+            "id": "old-record",
+            "source": "flash",
+            "timestamp": "2024-03-15T14:00:00+00:00",
+            "provenance": {"generator": "test"},
+            "payload": {"key": "value"},
+        }
+        record = TDFRecord(**data)
+        assert record.entity_ids == []
+
+    def test_entity_ids_do_not_affect_hash(self):
+        common = dict(
+            id="test-id",
+            source="flash",
+            timestamp=_sample_timestamp(),
+            provenance=TDFProvenance(generator="test"),
+            payload={"same": "data"},
+        )
+        r1 = TDFRecord(entity_ids=[], **common)
+        r2 = TDFRecord(entity_ids=["figure-abc-123", "figure-def-456"], **common)
+        assert r1.tdf_hash == r2.tdf_hash
+
 
 class TestFromClockchain:
     def test_basic_transform(self):
@@ -224,7 +273,9 @@ class TestFromProteus:
         assert record.provenance.run_id == "42"
         assert record.payload["actor_handle"] == "elonmusk"
         assert record.payload["actual_text"] == "Starship flight 2 is GO for March."
-        assert record.payload["predicted_text"] == "Starship flight 2 confirmed for March."
+        assert (
+            record.payload["predicted_text"] == "Starship flight 2 confirmed for March."
+        )
         assert record.payload["levenshtein_distance"] == 12
         assert record.payload["tx_hash"] == "0xabc123"
         assert record.payload["block_number"] == 12345678
@@ -377,7 +428,10 @@ class TestInferModelPermissiveness:
         assert infer_model_permissiveness("deepseek-r1") == "permissive"
         assert infer_model_permissiveness("qwen-2.5") == "permissive"
         assert infer_model_permissiveness("meta-llama/llama-3") == "permissive"
-        assert infer_model_permissiveness("stabilityai/stable-diffusion-xl") == "permissive"
+        assert (
+            infer_model_permissiveness("stabilityai/stable-diffusion-xl")
+            == "permissive"
+        )
 
     def test_restricted_models(self):
         assert infer_model_permissiveness("gemini-2.5-flash") == "restricted"
