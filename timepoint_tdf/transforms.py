@@ -7,7 +7,14 @@ SCHEMA_VERSIONS = {
     "0.2": "11 edge types, model provenance, graph state hash",
 }
 
-_PERMISSIVE_PREFIXES = ("deepseek", "qwen", "meta-llama", "mistralai", "nvidia", "stabilityai")
+_PERMISSIVE_PREFIXES = (
+    "deepseek",
+    "qwen",
+    "meta-llama",
+    "mistralai",
+    "nvidia",
+    "stabilityai",
+)
 _RESTRICTED_PREFIXES = ("google", "gemini", "anthropic", "claude", "openai", "gpt")
 
 
@@ -47,7 +54,7 @@ def from_clockchain(node: dict) -> TDFRecord:
     if isinstance(timestamp, str):
         timestamp = datetime.fromisoformat(timestamp)
 
-    return TDFRecord(
+    record = TDFRecord(
         id=record_id,
         source="clockchain",
         timestamp=timestamp,
@@ -64,6 +71,10 @@ def from_clockchain(node: dict) -> TDFRecord:
         ),
         payload=payload,
     )
+    entity_ids = payload.get("entity_ids", [])
+    if entity_ids:
+        record.entity_ids = entity_ids
+    return record
 
 
 _FLASH_PAYLOAD_KEYS = (
@@ -82,6 +93,7 @@ _FLASH_PAYLOAD_KEYS = (
     "grounding_data",
     "moment_data",
     "metadata",
+    "entity_ids",
 )
 
 
@@ -101,7 +113,7 @@ def from_flash(timepoint: dict) -> TDFRecord:
     text_model = timepoint.get("text_model_used")
     image_model = timepoint.get("image_model_used")
 
-    return TDFRecord(
+    record = TDFRecord(
         id=timepoint["id"],
         source="flash",
         timestamp=timestamp,
@@ -111,11 +123,17 @@ def from_flash(timepoint: dict) -> TDFRecord:
             text_model=text_model,
             image_model=image_model,
             model_provider=timepoint.get("model_provider"),
-            model_permissiveness=infer_model_permissiveness(text_model) if text_model else None,
+            model_permissiveness=infer_model_permissiveness(text_model)
+            if text_model
+            else None,
             generation_id=timepoint.get("generation_id"),
         ),
         payload=payload,
     )
+    entity_ids = payload.get("entity_ids", [])
+    if entity_ids:
+        record.entity_ids = entity_ids
+    return record
 
 
 def from_pro(run_data: dict) -> TDFRecord:
