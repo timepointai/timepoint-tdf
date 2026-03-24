@@ -25,6 +25,7 @@ class TDFRecord(BaseModel):
     timestamp: datetime
     provenance: TDFProvenance
     payload: dict
+    entity_ids: list[str] = []
     tdf_hash: str = ""
 
     def model_post_init(self, __context):
