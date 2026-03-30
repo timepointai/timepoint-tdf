@@ -47,6 +47,9 @@ def from_clockchain(node: dict) -> TDFRecord:
         "schema_version",
         "generation_id",
         "graph_state_hash",
+        "grounding_model",
+        "grounding_status",
+        "grounded_at",
     }
     payload = {k: v for k, v in node.items() if k not in internal_keys}
 
@@ -68,6 +71,9 @@ def from_clockchain(node: dict) -> TDFRecord:
             model_permissiveness=node.get("model_permissiveness"),
             schema_version=node.get("schema_version", "0.1"),
             generation_id=node.get("generation_id"),
+            grounding_model=node.get("grounding_model"),
+            grounding_status=node.get("grounding_status"),
+            grounded_at=node.get("grounded_at"),
         ),
         payload=payload,
     )
@@ -127,6 +133,9 @@ def from_flash(timepoint: dict) -> TDFRecord:
             if text_model
             else None,
             generation_id=timepoint.get("generation_id"),
+            grounding_model=timepoint.get("grounding_model"),
+            grounding_status=timepoint.get("grounding_status"),
+            grounded_at=timepoint.get("grounded_at"),
         ),
         payload=payload,
     )

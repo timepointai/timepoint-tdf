@@ -16,6 +16,9 @@ class TDFProvenance(BaseModel):
     model_permissiveness: Optional[str] = None  # permissive, restricted, unknown
     schema_version: Optional[str] = "0.1"  # Clockchain schema version
     generation_id: Optional[str] = None  # Unique ID for the generation run
+    grounding_model: Optional[str] = None  # e.g. "perplexity/sonar"
+    grounding_status: Optional[str] = None  # grounded, skipped, failed
+    grounded_at: Optional[datetime] = None
 
 
 class TDFRecord(BaseModel):
