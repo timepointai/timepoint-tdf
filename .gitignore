@@ -184,3 +184,6 @@ cython_debug/
 
 # Local
 .local/
+
+# Claude Code
+.claude/

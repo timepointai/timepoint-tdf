@@ -160,6 +160,7 @@ class TestTDFRecord:
         assert r1.tdf_hash == r2.tdf_hash
 
 
+
 class TestFromClockchain:
     def test_basic_transform(self):
         node = {
