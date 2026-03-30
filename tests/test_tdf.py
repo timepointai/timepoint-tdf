@@ -134,6 +134,32 @@ class TestTDFRecord:
         r2 = TDFRecord(entity_ids=["figure-abc-123", "figure-def-456"], **common)
         assert r1.tdf_hash == r2.tdf_hash
 
+    def test_grounding_provenance_fields_default(self):
+        prov = TDFProvenance(generator="test")
+        assert prov.grounding_model is None
+        assert prov.grounding_status is None
+        assert prov.grounded_at is None
+
+    def test_grounding_provenance_fields_do_not_affect_hash(self):
+        common = dict(
+            id="test-id",
+            source="flash",
+            timestamp=_sample_timestamp(),
+            payload={"same": "data"},
+        )
+        r1 = TDFRecord(provenance=TDFProvenance(generator="test"), **common)
+        r2 = TDFRecord(
+            provenance=TDFProvenance(
+                generator="test",
+                grounding_model="perplexity/sonar",
+                grounding_status="grounded",
+                grounded_at=datetime(2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc),
+            ),
+            **common,
+        )
+        assert r1.tdf_hash == r2.tdf_hash
+
+
 
 class TestFromClockchain:
     def test_basic_transform(self):
@@ -210,6 +236,7 @@ class TestFromFlash:
             "grounding_data",
             "moment_data",
             "metadata",
+            "entity_ids",
         }
         assert set(record.payload.keys()) == expected_keys
         assert record.payload["year"] == 1941
@@ -368,6 +395,39 @@ class TestJSONLRoundTrip:
             os.unlink(tmp_path)
 
 
+class TestGroundingProvenanceRoundTrip:
+    def test_round_trip_with_grounding_provenance(self):
+        records = [
+            TDFRecord(
+                id="record-grounding",
+                source="flash",
+                timestamp=_sample_timestamp(),
+                provenance=TDFProvenance(
+                    generator="timepoint-flash",
+                    grounding_model="perplexity/sonar",
+                    grounding_status="grounded",
+                    grounded_at=datetime(2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc),
+                ),
+                payload={"title": "Grounded Test"},
+            )
+        ]
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False) as f:
+            tmp_path = f.name
+
+        try:
+            write_tdf_jsonl(records, tmp_path)
+            loaded = read_tdf_jsonl(tmp_path)
+            assert len(loaded) == 1
+            rec = loaded[0]
+            assert rec.provenance.grounding_model == "perplexity/sonar"
+            assert rec.provenance.grounding_status == "grounded"
+            assert rec.provenance.grounded_at == datetime(
+                2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc
+            )
+        finally:
+            os.unlink(tmp_path)
+
+
 class TestFromClockchainV02:
     def test_v02_node_promotes_provenance_fields(self):
         node = {
@@ -403,6 +463,43 @@ class TestFromClockchainV02:
         # Content stays in payload
         assert record.payload["title"] == "V02 Event"
         assert record.payload["body"] == "Content here"
+
+
+class TestFromClockchainGrounding:
+    def test_grounding_fields_carried_through(self):
+        node = {
+            "path": "/2026/march/30/1200/us/grounded-event",
+            "id": "cc-grounded-uuid",
+            "created_at": "2026-03-30T12:00:00+00:00",
+            "grounding_model": "perplexity/sonar",
+            "grounding_status": "grounded",
+            "grounded_at": "2026-03-30T11:00:00+00:00",
+            "title": "Grounded Event",
+            "body": "Content",
+        }
+        record = from_clockchain(node)
+        assert record.provenance.grounding_model == "perplexity/sonar"
+        assert record.provenance.grounding_status == "grounded"
+        assert record.provenance.grounded_at == datetime(2026, 3, 30, 11, 0, 0, tzinfo=timezone.utc)
+        # Grounding fields should NOT be in payload
+        assert "grounding_model" not in record.payload
+        assert "grounding_status" not in record.payload
+        assert "grounded_at" not in record.payload
+
+
+class TestFromFlashGrounding:
+    def test_grounding_fields_carried_through(self):
+        timepoint = {
+            "id": "flash-grounded-001",
+            "created_at": "2026-03-30T12:00:00+00:00",
+            "grounding_model": "perplexity/sonar",
+            "grounding_status": "grounded",
+            "grounded_at": "2026-03-30T11:00:00+00:00",
+        }
+        record = from_flash(timepoint)
+        assert record.provenance.grounding_model == "perplexity/sonar"
+        assert record.provenance.grounding_status == "grounded"
+        assert record.provenance.grounded_at == datetime(2026, 3, 30, 11, 0, 0, tzinfo=timezone.utc)
 
 
 class TestFromFlashModelProvenance:
