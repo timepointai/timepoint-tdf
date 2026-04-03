@@ -93,6 +93,8 @@ _FLASH_PAYLOAD_KEYS = (
     "time_of_day",
     "era",
     "location",
+    "latitude",
+    "longitude",
     "scene_data",
     "character_data",
     "dialog",
@@ -108,7 +110,8 @@ def from_flash(timepoint: dict) -> TDFRecord:
 
     Payload includes the full temporal-spatial-narrative content:
     query, slug, year, month, day, season, time_of_day, era, location,
-    scene_data, character_data, dialog, grounding_data, moment_data, metadata.
+    latitude, longitude, scene_data, character_data, dialog,
+    grounding_data, moment_data, metadata.
     """
     timestamp = timepoint["created_at"]
     if isinstance(timestamp, str):
