@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from typing import Optional
 
 from .record import TDFProvenance, TDFRecord
 
@@ -6,6 +7,33 @@ SCHEMA_VERSIONS = {
     "0.1": "Original 4 edge types, no model tracking",
     "0.2": "11 edge types, model provenance, graph state hash",
 }
+
+
+def _coerce_timestamp(value, *, default: Optional[datetime] = None) -> Optional[datetime]:
+    """Coerce a clockchain timestamp value to a datetime (or None).
+
+    Clockchain has historically stored missing timestamps as empty strings
+    (``""``) rather than NULL, which trips ``datetime.fromisoformat``. Treat
+    empty / whitespace-only strings the same as ``None`` so downstream
+    transforms (and pydantic validation on optional datetime fields) don't
+    blow up.
+
+    - ``None`` → ``default``
+    - ``""`` / whitespace-only string → ``default``
+    - ISO-format string → parsed ``datetime``
+    - ``datetime`` instance → returned as-is
+    """
+    if value is None:
+        return default
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return default
+        return datetime.fromisoformat(stripped)
+    # Unknown type — let downstream raise rather than silently dropping
+    return value
 
 _PERMISSIVE_PREFIXES = (
     "deepseek",
@@ -53,9 +81,14 @@ def from_clockchain(node: dict) -> TDFRecord:
     }
     payload = {k: v for k, v in node.items() if k not in internal_keys}
 
-    timestamp = node["created_at"]
-    if isinstance(timestamp, str):
-        timestamp = datetime.fromisoformat(timestamp)
+    # `created_at` is required on TDFRecord — fall back to "now" if the
+    # clockchain row has no usable timestamp (None, "", "   ").
+    timestamp = _coerce_timestamp(
+        node.get("created_at"), default=datetime.now(timezone.utc)
+    )
+    # `grounded_at` is optional — coerce empty/whitespace strings to None
+    # so pydantic doesn't try to parse them as ISO timestamps.
+    grounded_at = _coerce_timestamp(node.get("grounded_at"), default=None)
 
     record = TDFRecord(
         id=record_id,
@@ -73,7 +106,7 @@ def from_clockchain(node: dict) -> TDFRecord:
             generation_id=node.get("generation_id"),
             grounding_model=node.get("grounding_model"),
             grounding_status=node.get("grounding_status"),
-            grounded_at=node.get("grounded_at"),
+            grounded_at=grounded_at,
         ),
         payload=payload,
     )
