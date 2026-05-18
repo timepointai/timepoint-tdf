@@ -469,6 +469,109 @@ class TestFromClockchainV02:
         assert record.payload["body"] == "Content here"
 
 
+class TestFromClockchainEmptyTimestamps:
+    """Regression coverage for el-131oz: clockchain occasionally stores empty
+    strings (or whitespace) where a NULL timestamp would be expected. Those
+    shouldn't blow up ``from_clockchain`` — they should coerce to ``now`` for
+    the required ``created_at`` and to ``None`` for optional ``grounded_at``.
+    """
+
+    def _base_node(self):
+        return {
+            "path": "/2026/march/30/1200/us/empty-ts",
+            "id": "cc-empty-ts-uuid",
+            "title": "Empty TS",
+            "body": "Content",
+        }
+
+    def test_empty_string_created_at_falls_back_to_now(self):
+        node = self._base_node()
+        node["created_at"] = ""
+        before = datetime.now(timezone.utc)
+        record = from_clockchain(node)
+        after = datetime.now(timezone.utc)
+        assert record.timestamp is not None
+        assert before <= record.timestamp <= after
+
+    def test_none_created_at_falls_back_to_now(self):
+        node = self._base_node()
+        node["created_at"] = None
+        before = datetime.now(timezone.utc)
+        record = from_clockchain(node)
+        after = datetime.now(timezone.utc)
+        assert record.timestamp is not None
+        assert before <= record.timestamp <= after
+
+    def test_missing_created_at_falls_back_to_now(self):
+        node = self._base_node()
+        # no created_at key at all
+        before = datetime.now(timezone.utc)
+        record = from_clockchain(node)
+        after = datetime.now(timezone.utc)
+        assert record.timestamp is not None
+        assert before <= record.timestamp <= after
+
+    def test_whitespace_only_created_at_falls_back_to_now(self):
+        node = self._base_node()
+        node["created_at"] = "   \t\n  "
+        before = datetime.now(timezone.utc)
+        record = from_clockchain(node)
+        after = datetime.now(timezone.utc)
+        assert record.timestamp is not None
+        assert before <= record.timestamp <= after
+
+    def test_valid_created_at_still_parses(self):
+        node = self._base_node()
+        node["created_at"] = "2026-03-30T12:00:00+00:00"
+        record = from_clockchain(node)
+        assert record.timestamp == datetime(2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_datetime_instance_created_at_passes_through(self):
+        node = self._base_node()
+        node["created_at"] = datetime(2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc)
+        record = from_clockchain(node)
+        assert record.timestamp == datetime(2026, 3, 30, 12, 0, 0, tzinfo=timezone.utc)
+
+    def test_empty_string_grounded_at_coerces_to_none(self):
+        node = self._base_node()
+        node["created_at"] = "2026-03-30T12:00:00+00:00"
+        node["grounded_at"] = ""
+        record = from_clockchain(node)
+        assert record.provenance.grounded_at is None
+
+    def test_whitespace_only_grounded_at_coerces_to_none(self):
+        node = self._base_node()
+        node["created_at"] = "2026-03-30T12:00:00+00:00"
+        node["grounded_at"] = "   "
+        record = from_clockchain(node)
+        assert record.provenance.grounded_at is None
+
+    def test_none_grounded_at_stays_none(self):
+        node = self._base_node()
+        node["created_at"] = "2026-03-30T12:00:00+00:00"
+        node["grounded_at"] = None
+        record = from_clockchain(node)
+        assert record.provenance.grounded_at is None
+
+    def test_valid_grounded_at_still_parses(self):
+        node = self._base_node()
+        node["created_at"] = "2026-03-30T12:00:00+00:00"
+        node["grounded_at"] = "2026-03-30T11:00:00+00:00"
+        record = from_clockchain(node)
+        assert record.provenance.grounded_at == datetime(
+            2026, 3, 30, 11, 0, 0, tzinfo=timezone.utc
+        )
+
+    def test_both_empty_does_not_raise(self):
+        node = self._base_node()
+        node["created_at"] = ""
+        node["grounded_at"] = ""
+        # The original bug: this raised ValueError("Invalid isoformat string: ''")
+        record = from_clockchain(node)
+        assert record.timestamp is not None
+        assert record.provenance.grounded_at is None
+
+
 class TestFromClockchainGrounding:
     def test_grounding_fields_carried_through(self):
         node = {
