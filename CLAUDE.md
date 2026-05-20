@@ -1,4 +1,4 @@
-# Timepoint Dev Management
+# timepoint-tdf
 
 ## Commit Rules
 
